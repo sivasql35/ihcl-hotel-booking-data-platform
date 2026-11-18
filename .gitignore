@@ -1,0 +1,19 @@
+
+target/
+dbt_packages/
+logs/
+.env
+
+# Snowflake credentials and private keys
+profiles.yml
+.snowflake/
+*.p8
+*.pem
+*.key
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+.user.yml

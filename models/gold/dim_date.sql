@@ -1,0 +1,59 @@
+
+{{ config(materialized='table') }}
+
+WITH DATE_RANGE AS (
+
+    SELECT
+        MIN(ARRIVAL_DATE) AS MIN_DATE,
+        MAX(ARRIVAL_DATE) AS MAX_DATE
+    FROM {{ ref('silver_bookings') }}
+
+),
+
+CALENDAR AS (
+
+    SELECT
+        DATEADD(
+            DAY,
+            SEQ4(),
+            DATE_RANGE.MIN_DATE
+        )::DATE AS FULL_DATE
+
+    FROM DATE_RANGE,
+         TABLE(GENERATOR(ROWCOUNT => 2000))
+
+    WHERE DATEADD(
+        DAY,
+        SEQ4(),
+        DATE_RANGE.MIN_DATE
+    )::DATE <= DATE_RANGE.MAX_DATE
+
+)
+
+SELECT
+    TO_NUMBER(TO_CHAR(FULL_DATE, 'YYYYMMDD')) AS DATE_KEY,
+
+    FULL_DATE,
+
+    YEAR(FULL_DATE) AS YEAR,
+
+    QUARTER(FULL_DATE) AS QUARTER,
+
+    MONTH(FULL_DATE) AS MONTH,
+
+    MONTHNAME(FULL_DATE) AS MONTH_NAME,
+
+    WEEKISO(FULL_DATE) AS WEEK_NUMBER,
+
+    DAY(FULL_DATE) AS DAY_OF_MONTH,
+
+    DAYNAME(FULL_DATE) AS DAY_NAME,
+
+    CASE
+        WHEN DAYOFWEEKISO(FULL_DATE) IN (6, 7)
+        THEN TRUE
+        ELSE FALSE
+    END AS IS_WEEKEND
+
+FROM CALENDAR
+ORDER BY FULL_DATE

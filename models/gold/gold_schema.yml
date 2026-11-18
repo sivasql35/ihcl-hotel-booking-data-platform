@@ -1,0 +1,99 @@
+models:
+  - name: dim_date
+    description: "Calendar dimension containing continuous dates for hotel booking analytics."
+    columns:
+      - name: DATE_KEY
+        description: "Integer date key in YYYYMMDD format."
+        tests:
+          - not_null
+          - unique
+
+      - name: FULL_DATE
+        description: "Actual calendar date."
+        tests:
+          - not_null
+          - unique
+
+      - name: YEAR
+        tests:
+          - not_null
+
+      - name: MONTH
+        tests:
+          - not_null
+
+      - name: IS_WEEKEND
+        tests:
+          - not_null
+
+  - name: fact_bookings
+    description: "Gold fact table containing hotel booking records and dimension keys."
+    columns:
+      - name: BOOKING_KEY
+        description: "Unique technical identifier for each source booking record."
+        tests:
+          - not_null
+          - unique
+
+      - name: HOTEL_KEY
+        description: "Foreign key referencing the hotel dimension."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_hotel')
+                field: HOTEL_KEY
+
+      - name: DATE_KEY
+        description: "Foreign key referencing the arrival date dimension."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: DATE_KEY
+
+      - name: IS_CANCELED
+        description: "Cancellation indicator."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+  
+  - name: mart_hotel_performance
+    description: "Hotel-level business performance metrics aggregated from booking records."
+    columns:
+      - name: HOTEL_KEY
+        tests:
+          - not_null
+          - unique
+
+      - name: HOTEL
+        tests:
+          - not_null
+
+      - name: TOTAL_BOOKINGS
+        tests:
+          - not_null
+
+      - name: CANCELED_BOOKINGS
+        tests:
+          - not_null
+
+      - name: NOT_CANCELED_BOOKINGS
+        tests:
+          - not_null
+
+      - name: CANCELLATION_RATE_PCT
+        tests:
+          - not_null
+
+      - name: AVG_ADR
+        tests:
+          - not_null
+
+      - name: TOTAL_ROOM_NIGHTS
+        tests:
+          - not_null
