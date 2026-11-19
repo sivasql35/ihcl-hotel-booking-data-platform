@@ -1,10 +1,20 @@
 
 version: 2
 
+sources:
+  - name: bronze
+    description: "Bronze layer source tables in Snowflake."
+    schema: BRONZE
+    tables:
+      - name: CRM_CUSTOMERS
+      - name: CRM_INTERACTIONS
+      - name: CRM_CAMPAIGN_MASTER
+      - name: CRM_CAMPAIGN_ACTIVITY
+
 models:
+  # Existing PMS Silver model - preserved
   - name: silver_bookings
     description: "Cleaned and standardized hotel booking records from the Bronze layer."
-
     columns:
       - name: BOOKING_KEY
         description: "SHA-256 technical key generated using source filename and row number."
@@ -34,3 +44,70 @@ models:
         description: "Total weekend and weekday stay nights."
         tests:
           - not_null
+
+  # CRM Customers
+  - name: silver_crm_customers
+    description: "Cleaned and deduplicated CRM customer records."
+    columns:
+      - name: CUSTOMER_ID
+        description: "Unique customer identifier."
+        tests:
+          - not_null
+          - unique
+
+  # CRM Interactions
+  - name: silver_crm_interactions
+    description: "Cleaned and deduplicated customer interaction records."
+    columns:
+      - name: INTERACTION_ID
+        description: "Unique customer interaction identifier."
+        tests:
+          - not_null
+          - unique
+
+      - name: CUSTOMER_ID
+        description: "Customer associated with the interaction."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_crm_customers')
+                field: CUSTOMER_ID
+
+  # CRM Campaign Master
+  - name: silver_crm_campaign_master
+    description: "Cleaned and deduplicated marketing campaign master records."
+    columns:
+      - name: CAMPAIGN_ID
+        description: "Unique marketing campaign identifier."
+        tests:
+          - not_null
+          - unique
+
+  # CRM Campaign Activity
+  - name: silver_crm_campaign_activity
+    description: "Cleaned and deduplicated customer campaign activity records."
+    columns:
+      - name: CAMPAIGN_ACTIVITY_ID
+        description: "Unique campaign activity identifier."
+        tests:
+          - not_null
+          - unique
+
+      - name: CAMPAIGN_ID
+        description: "Campaign associated with the activity."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_crm_campaign_master')
+                field: CAMPAIGN_ID
+
+      - name: CUSTOMER_ID
+        description: "Customer associated with the campaign activity."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_crm_customers')
+                field: CUSTOMER_ID

@@ -1,4 +1,11 @@
+
+version: 2
+
 models:
+  # ============================================================
+  # PMS GOLD MODELS
+  # ============================================================
+
   - name: dim_date
     description: "Calendar dimension containing continuous dates for hotel booking analytics."
     columns:
@@ -61,7 +68,6 @@ models:
               arguments:
                 values: [0, 1]
 
-  
   - name: mart_hotel_performance
     description: "Hotel-level business performance metrics aggregated from booking records."
     columns:
@@ -95,5 +101,73 @@ models:
           - not_null
 
       - name: TOTAL_ROOM_NIGHTS
+        tests:
+          - not_null
+
+  # ============================================================
+  # CRM GOLD MODELS
+  # ============================================================
+
+  - name: gold_crm_customer_360
+    description: "Unified customer profile combining customer information, interaction history and marketing campaign activity."
+    columns:
+      - name: CUSTOMER_ID
+        description: "Unique customer identifier; one record per customer."
+        tests:
+          - not_null
+          - unique
+
+  - name: gold_crm_engagement_summary
+    description: "Customer-level engagement metrics covering interactions, statuses, priorities, channels and satisfaction."
+    columns:
+      - name: CUSTOMER_ID
+        description: "Unique customer identifier; one record per customer."
+        tests:
+          - not_null
+          - unique
+
+  - name: gold_crm_campaign_performance
+    description: "Campaign-level marketing performance metrics covering delivery, engagement, conversions, revenue and campaign costs."
+    columns:
+      - name: CAMPAIGN_ID
+        description: "Unique marketing campaign identifier; one record per campaign."
+        tests:
+          - not_null
+          - unique
+
+      - name: TOTAL_ACTIVITIES
+        tests:
+          - not_null
+
+      - name: DELIVERED_ACTIVITIES
+        tests:
+          - not_null
+
+      - name: BOUNCED_ACTIVITIES
+        tests:
+          - not_null
+
+      - name: OPENED_ACTIVITIES
+        tests:
+          - not_null
+
+      - name: CLICKED_ACTIVITIES
+        tests:
+          - not_null
+
+      - name: CONVERTED_ACTIVITIES
+        tests:
+          - not_null
+
+  - name: gold_crm_customer_segments
+    description: "Customer-segment-level analytics covering customer counts, loyalty, engagement, campaign conversions and return on marketing spend."
+    columns:
+      - name: CUSTOMER_SEGMENT
+        description: "Customer segment classification; one record per segment."
+        tests:
+          - not_null
+          - unique
+
+      - name: TOTAL_CUSTOMERS
         tests:
           - not_null
