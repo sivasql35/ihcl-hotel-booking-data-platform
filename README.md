@@ -1,788 +1,412 @@
-\# Hotel Booking Data Engineering Platform
+# Hotel Booking & CRM Data Engineering Platform
 
-\### AWS S3 | Snowflake | Snowpipe | dbt Core | SQL
+**AWS S3 | Snowflake | Snowpipe | dbt Core | SQL | Python**
 
+An end-to-end cloud data engineering portfolio project demonstrating data ingestion, transformation, dimensional modelling, data quality validation, and analytics across hotel booking (PMS) and customer relationship management (CRM) datasets.
 
+[![dbt](https://img.shields.io/badge/dbt-Core-orange)](https://www.getdbt.com/)
+[![Snowflake](https://img.shields.io/badge/Data_Warehouse-Snowflake-blue)](https://www.snowflake.com/)
+[![AWS](https://img.shields.io/badge/Cloud-AWS-yellow)](https://aws.amazon.com/)
+[![Build](https://img.shields.io/badge/dbt_Build-73%2F73_Passed-brightgreen)](https://github.com/sivasql35/ihcl-hotel-booking-data-platform)
 
-\## 1. Project Overview
+---
 
+## 1. Project Overview
 
+This project demonstrates a cloud-based data engineering platform that integrates two business domains:
 
-This project demonstrates an end-to-end cloud data engineering pipeline for processing hotel booking data using AWS S3, Snowflake, Snowpipe, and dbt Core.
+**Property Management System (PMS)**
+- Hotel booking records
+- Hotel and date dimensions
+- Booking cancellation analytics
+- Hotel-level business performance
 
+**Customer Relationship Management (CRM)**
+- Customer profiles
+- Customer interactions
+- Marketing campaign information
+- Campaign delivery and engagement
+- Customer segmentation and conversion analytics
 
+The platform uses AWS S3 as a source-file landing zone, Snowflake as the cloud data warehouse, Snowpipe for automated ingestion, and dbt Core for SQL-based transformations and testing.
 
-The platform ingests booking CSV files from Amazon S3 into Snowflake using automated Snowpipe ingestion. dbt Core then transforms the raw booking records into standardized Silver datasets and analytics-ready Gold dimensional models.
+The data is organized using the Medallion Architecture: Bronze, Silver, and Gold.
 
+**Project context:** This is an independently developed portfolio project using sample hotel-booking data and generated synthetic CRM datasets. It demonstrates hotel-industry business scenarios and is not IHCL's proprietary production platform or a representation of its internal systems.
 
+## 2. Architecture
 
-The final Gold layer supports hotel-level booking analysis, cancellation-rate monitoring, average daily rate (ADR) analysis, and room-night reporting.
+### High-level architecture
 
+```mermaid
+flowchart TD
+    A[PMS Booking CSV Files] --> S3[AWS S3]
+    B[CRM Customer CSV Files] --> S3
+    C[CRM Interaction CSV Files] --> S3
+    D[CRM Campaign CSV Files] --> S3
 
+    S3 --> E[Snowpipe / Automated Ingestion]
+    E --> F[Snowflake BRONZE]
 
-\*\*Note:\*\* This is a portfolio project using a public/synthetic hotel booking dataset. It is not an implementation using IHCL's proprietary production data.
+    F --> G[dbt Core]
+    G --> H[Snowflake SILVER]
+    H --> I[dbt Core]
+    I --> J[Snowflake GOLD]
 
-
-
-\## 2. Architecture
-
-
-
-```text
-
-&#x20;            Hotel Booking CSV Files
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;                AWS S3 Bucket
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;             S3 Event Notification
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;                Amazon SQS
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;             Snowflake Snowpipe
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;             SNOWFLAKE BRONZE
-
-&#x20;                 BOOKINGS
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;                 dbt CORE
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;             SNOWFLAKE SILVER
-
-&#x20;              SILVER\_BOOKINGS
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;                 dbt CORE
-
-&#x20;                      |
-
-&#x20;           +----------+----------+
-
-&#x20;           |                     |
-
-&#x20;           v                     v
-
-&#x20;       DIM\_HOTEL              DIM\_DATE
-
-&#x20;           |                     |
-
-&#x20;           +----------+----------+
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;                FACT\_BOOKINGS
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;            MART\_HOTEL\_PERFORMANCE
-
-&#x20;                      |
-
-&#x20;                      v
-
-&#x20;             Business Analytics
-
+    J --> K[PMS Analytics]
+    J --> L[CRM Analytics]
 ```
 
+### Medallion architecture
 
+| Layer | Responsibility |
+|---|---|
+| Bronze | Raw ingested source records with ingestion metadata |
+| Silver | Cleaned, standardized, typed, and validated datasets |
+| Gold | Business-ready facts, dimensions, customer views, and analytical marts |
 
-\## 3. Technology Stack
-
-
+## 3. Technology Stack
 
 | Technology | Purpose |
-
 |---|---|
-
-| AWS S3 | Cloud storage and source-file landing zone |
-
-| AWS IAM | Secure access between AWS and Snowflake |
-
-| Amazon SQS | Event notification delivery for Snowpipe |
-
+| AWS S3 | Source-file landing and cloud storage |
+| AWS IAM | Secure AWS-to-Snowflake access |
+| Amazon SQS | Snowpipe event notification delivery |
 | Snowflake | Cloud data warehouse |
-
 | Snowpipe | Automated file ingestion |
+| SQL | Data transformation and analytical modelling |
+| dbt Core | ELT orchestration, model dependencies, and testing |
+| Python | Synthetic CRM data generation and ingestion utilities |
+| Git and GitHub | Version control and project management |
 
-| dbt Core | SQL-based data transformation and testing |
+## 4. Data Sources
 
-| SQL | Data cleansing, modelling and analytics |
+The project contains PMS booking data and synthetic CRM datasets.
 
-| Git | Version control |
-
-
-
-\## 4. Data Pipeline Implementation
-
-
-
-\### Step 1: AWS S3 – Data Landing
-
-
-
-\- Created an S3 bucket named `ihcl-enterprise-data-lake`.
-
-\- Configured a dedicated source prefix:
-
-
-
-&#x20; `raw/pms/bookings/`
-
-
-
-\- Uploaded hotel booking CSV files into the landing zone.
-
-\- Used separate source filenames to distinguish ingestion batches.
-
-\- Preserved the original source files for traceability and reprocessing.
-
-
-
-\### Step 2: Snowflake – Secure S3 Integration
-
-
-
-Configured Snowflake access to AWS S3 using:
-
-
-
-\- Storage integration: `IHCL\_INBOUND\_INT`
-
-\- External stage: `IHCL\_DB.BRONZE.IHCL\_PMS\_BOOKINGS\_STAGE`
-
-\- File format: `IHCL\_DB.BRONZE.IHCL\_PMS\_CSV\_FORMAT`
-
-
-
-Configured IAM permissions and trust relationships for secure access between Snowflake and AWS.
-
-
-
-\### Step 3: Snowpipe – Automated Ingestion
-
-
-
-Implemented Snowpipe with S3 event notifications and Amazon SQS.
-
-
-
-Snowpipe automatically loads new CSV files from the S3 landing prefix into the Snowflake Bronze table.
-
-
-
-Implemented:
-
-\- Header-based column matching.
-
-\- Case-insensitive column mapping.
-
-\- Source filename tracking.
-
-\- Source row-number tracking.
-
-\- File modification timestamp tracking.
-
-\- Ingestion timestamp tracking.
-
-
-
-\### Step 4: Snowflake Bronze Layer
-
-
-
-Created the Bronze table:
-
-
-
-`IHCL\_DB.BRONZE.BOOKINGS`
-
-
-
-The Bronze layer preserves source values as text and adds ingestion metadata.
-
-
-
-Metadata columns:
-
-
-
-\- `SOURCE\_FILE\_NAME`
-
-\- `FILE\_ROW\_NUMBER`
-
-\- `FILE\_LAST\_MODIFIED`
-
-\- `INGESTION\_TIMESTAMP`
-
-
-
-This provides source-level traceability and helps investigate ingestion issues.
-
-
-
-\### Step 5: dbt Silver Layer
-
-
-
-Created the dbt model:
-
-
-
-`IHCL\_DB.SILVER.SILVER\_BOOKINGS`
-
-
-
-Transformations include:
-
-
-
-\- Data type conversion.
-
-\- Trimming and standardization.
-
-\- Numeric and date transformations.
-
-\- Derived arrival date.
-
-\- Total guest calculation.
-
-\- Total stay-night calculation.
-
-\- Technical booking key generation.
-
-\- Data quality anomaly flags.
-
-
-
-Generated a deterministic SHA-256 technical key using source filename and source row number.
-
-
-
-```sql
-
-SHA2(
-
-&#x20;   CONCAT(
-
-&#x20;       COALESCE(SOURCE\_FILE\_NAME, ''),
-
-&#x20;       '|',
-
-&#x20;       COALESCE(TO\_VARCHAR(FILE\_ROW\_NUMBER), '')
-
-&#x20;   ),
-
-&#x20;   256
-
-) AS BOOKING\_KEY
-
-```
-
-
-
-This key identifies a source record. It is not a real PMS reservation identifier.
-
-
-
-\### Step 6: dbt Gold Layer – Dimensional Modelling
-
-
-
-Implemented a dimensional model consisting of two dimensions, one fact table, and one business mart.
-
-
-
-\*\*DIM\_HOTEL\*\*
-
-
-
-\- One row per distinct hotel and city combination.
-
-\- Generates a deterministic hotel key.
-
-\- Stores hotel, city, and country attributes.
-
-
-
-\*\*DIM\_DATE\*\*
-
-
-
-\- Generates a continuous calendar date dimension.
-
-\- Includes year, quarter, month, week, day, and weekend attributes.
-
-\- Uses `YYYYMMDD` as the date key.
-
-
-
-\*\*FACT\_BOOKINGS\*\*
-
-
-
-\- Stores booking-level measures and attributes.
-
-\- Connects bookings to hotel and date dimensions.
-
-\- Includes booking status, ADR, guests, stay nights, and source metadata.
-
-
-
-\*\*MART\_HOTEL\_PERFORMANCE\*\*
-
-
-
-\- Aggregates booking metrics at hotel level.
-
-\- Calculates cancellation rate.
-
-\- Calculates average ADR.
-
-\- Calculates average guests per booking.
-
-\- Summarizes total room nights.
-
-
-
-\## 5. Data Quality and Validation
-
-
-
-Implemented dbt schema tests to validate the transformed datasets.
-
-
-
-Examples:
-
-
-
-\- `not\_null`
-
-\- `unique`
-
-\- `accepted\_values`
-
-\- `relationships`
-
-
-
-Validation results from the completed build:
-
-
-
-| Model | Records |
-
+| Dataset | Records |
 |---|---:|
+| PMS hotel bookings | 119,500 |
+| CRM customers | 10,000 |
+| CRM interactions | 25,000 |
+| CRM campaign master | 25 |
+| CRM campaign activities | 5,000 |
 
-| SILVER\_BOOKINGS | 119,500 |
+CRM source data is generated using Python scripts to create realistic customer, interaction, and campaign scenarios.
 
-| DIM\_HOTEL | 31 |
+## 5. AWS and Snowflake Ingestion
 
-| DIM\_DATE | 1,458 |
+### AWS S3
 
-| FACT\_BOOKINGS | 119,500 |
+Created an S3 landing zone for source CSV files.
 
-| MART\_HOTEL\_PERFORMANCE | 31 |
+The PMS source prefix is:
 
-
-
-\*\*Full dbt build result:\*\*
-
-
-
-\- Models built: 5
-
-\- Data tests passed: 31
-
-\- Total successful operations: 36
-
-\- Warnings: 0
-
-\- Errors: 0
-
-
-
-Command:
-
-
-
-```bash
-
-dbt build
-
+```text
+raw/pms/bookings/
 ```
 
+Source files are retained for traceability and reprocessing.
 
+### Snowflake integration
 
-\### Data Anomaly Investigation
+Configured secure access between AWS S3 and Snowflake using an IAM role and Snowflake storage integration.
 
+The PMS implementation uses:
 
+- Storage integration: `IHCL_INBOUND_INT`
+- External stage: `IHCL_DB.BRONZE.IHCL_PMS_BOOKINGS_STAGE`
+- CSV file format: `IHCL_DB.BRONZE.IHCL_PMS_CSV_FORMAT`
 
-Investigated potential data quality anomalies, including:
+### Snowpipe
 
+Implemented automated ingestion using Snowpipe and S3 event notifications through Amazon SQS.
 
+The project includes dedicated Snowpipe ingestion pipelines for the PMS and CRM source datasets.
 
-\- Negative ADR values.
+### Bronze layer
 
-\- Zero-night stays.
+Raw records are stored in Snowflake with ingestion metadata.
 
-\- Zero-guest bookings.
+Important metadata fields include:
 
-\- Potential duplicate booking records.
+- `SOURCE_FILE_NAME`
+- `FILE_ROW_NUMBER`
+- `FILE_LAST_MODIFIED`
+- `INGESTION_TIMESTAMP`
 
+These columns support source traceability, auditability, and data reconciliation.
 
+## 6. Silver Layer – Data Transformation
 
-The identified anomaly records were retained for investigation rather than automatically deleted.
+The Silver layer standardizes and prepares source records for analytical modelling.
 
+### PMS
 
+Model: `SILVER_BOOKINGS`
 
-Potential business duplicates were not removed because the dataset does not contain a reliable PMS reservation ID. The generated technical key identifies source rows, not actual reservations.
+Key transformations:
+- Data type conversion and standardization.
+- Date and numeric transformations.
+- Derived arrival date.
+- Total guest calculation.
+- Total stay-night calculation.
+- Technical booking key generation.
+- Data-quality anomaly investigation.
 
+A deterministic SHA-256 technical key is generated using the source filename and row number.
 
+This identifies a source record and is not a real PMS reservation identifier.
 
-\## 6. Business Analytics
+### CRM
 
+Four Silver models are implemented:
 
-
-The Gold mart supports the following metrics:
-
-
-
-| Metric | Description |
-
+| Model | Description |
 |---|---|
+| `SILVER_CRM_CUSTOMERS` | Cleaned customer profiles |
+| `SILVER_CRM_INTERACTIONS` | Customer interaction records |
+| `SILVER_CRM_CAMPAIGN_MASTER` | Marketing campaign master records |
+| `SILVER_CRM_CAMPAIGN_ACTIVITY` | Campaign delivery, engagement, and conversion events |
 
-| Total Bookings | Number of booking records |
+Key transformations include:
+- Data standardization and type conversion.
+- Null and duplicate handling.
+- Customer and campaign relationship validation.
+- Source metadata preservation.
+- Preparation of clean datasets for downstream analytics.
 
-| Canceled Bookings | Number of canceled records |
+## 7. Gold Layer – Business Analytics
 
-| Not Canceled Bookings | Number of non-canceled records |
+The Gold layer contains analytical models designed around business requirements.
 
-| Cancellation Rate | Canceled records as a percentage of total records |
+### PMS Gold models
 
-| Average ADR | Average daily rate across booking records |
+| Model | Grain / Purpose |
+|---|---|
+| `DIM_HOTEL` | One row per distinct hotel and city combination |
+| `DIM_DATE` | Continuous calendar date dimension |
+| `FACT_BOOKINGS` | Booking-level fact records |
+| `MART_HOTEL_PERFORMANCE` | Hotel-level performance metrics |
 
-| Average Guests | Average guests per booking |
+Business metrics include:
+- Total bookings.
+- Canceled and non-canceled bookings.
+- Cancellation rate.
+- Average Daily Rate (ADR).
+- Average guests per booking.
+- Total room nights.
 
-| Total Room Nights | Sum of recorded stay nights |
+### CRM Gold models
 
+| Model | Grain / Purpose |
+|---|---|
+| `GOLD_CRM_CUSTOMER_360` | One row per customer, combining profile, interaction, and campaign metrics |
+| `GOLD_CRM_ENGAGEMENT_SUMMARY` | One row per customer with interaction and engagement metrics |
+| `GOLD_CRM_CAMPAIGN_PERFORMANCE` | One row per campaign with delivery, engagement, conversion, and ROI metrics |
+| `GOLD_CRM_CUSTOMER_SEGMENTS` | One row per customer segment with customer and marketing performance metrics |
 
+Key CRM analytical measures include:
+- Total customer interactions.
+- Average customer satisfaction.
+- Interaction status and channel distribution.
+- Campaign delivery and bounce counts.
+- Opens, clicks, and conversions.
+- Campaign conversion value and cost.
+- Return on marketing spend (ROAS).
+- Customer segment performance.
 
-\### Observed Results
+Aggregations are performed independently before joining customer-level measures to avoid unintended row multiplication.
 
+## 8. Data Quality and Validation
 
+dbt schema tests are implemented across PMS and CRM models.
 
-Based on the completed dataset:
+Test types include:
 
+- `not_null`
+- `unique`
+- `accepted_values`
+- `relationships`
 
+Validation also includes source-level reconciliation and business-rule checks.
 
-\- Total booking records: 119,500
+### Final full-project build results
 
-\- Total canceled records: 44,231
-
-\- Total non-canceled records: 75,269
-
-\- Overall cancellation rate: 37.01%
-
-\- Hotel dimension records: 31
-
-
-
-These figures describe the portfolio dataset and should not be interpreted as actual IHCL operational performance.
-
-
-
-\## 7. dbt Lineage
-
-
-
-The dbt documentation lineage graph demonstrates the transformation dependencies:
-
-
-
-```text
-
-silver\_bookings
-
-&#x20;     |
-
-&#x20;     +------ dim\_hotel
-
-&#x20;     |
-
-&#x20;     +------ dim\_date
-
-&#x20;     |
-
-&#x20;     +------ fact\_bookings
-
-&#x20;                   |
-
-&#x20;                   v
-
-&#x20;         mart\_hotel\_performance
-
-```
-
-
-
-Generated documentation using:
-
-
+The complete project was executed using:
 
 ```bash
-
-dbt docs generate
-
-dbt docs serve --port 8081
-
-```
-
-
-
-The lineage graph helps understand model dependencies and the flow of data from Silver to Gold.
-
-
-
-\## 8. Project Structure
-
-
-
-```text
-
-ihcl\_dbt/
-
-│
-
-├── analyses/
-
-│
-
-├── macros/
-
-│   └── generate\_schema\_name.sql
-
-│
-
-├── models/
-
-│   ├── example/
-
-│   │
-
-│   ├── silver/
-
-│   │   ├── silver\_bookings.sql
-
-│   │   └── schema.yml
-
-│   │
-
-│   └── gold/
-
-│       ├── dim\_hotel.sql
-
-│       ├── dim\_date.sql
-
-│       ├── fact\_bookings.sql
-
-│       ├── mart\_hotel\_performance.sql
-
-│       └── schema.yml
-
-│
-
-├── seeds/
-
-├── snapshots/
-
-├── tests/
-
-├── dbt\_project.yml
-
-└── README.md
-
-```
-
-
-
-Credentials and private keys are maintained locally and must not be committed to Git.
-
-
-
-\## 9. Running the dbt Project
-
-
-
-Install the required dbt packages in your Python environment:
-
-
-
-```bash
-
-pip install dbt-core dbt-snowflake
-
-```
-
-
-
-Configure the Snowflake connection in `profiles.yml` using your own account credentials and authentication settings.
-
-
-
-Validate the connection:
-
-
-
-```bash
-
-dbt debug
-
-```
-
-
-
-Parse the project:
-
-
-
-```bash
-
-dbt parse
-
-```
-
-
-
-Run all models and tests:
-
-
-
-```bash
-
 dbt build
-
 ```
 
+**Actual execution results:**
 
+| Metric | Result |
+|---|---:|
+| Table models built | 13 |
+| Data tests executed | 60 |
+| Successful operations | 73 |
+| Failed operations | 0 |
+| Warnings | 0 |
+| Execution time | 19.67 seconds |
 
-Generate documentation:
+**Final result: 73/73 successful operations.**
 
+### Data reconciliation highlights
 
+| Validation | Expected / Observed |
+|---|---:|
+| PMS booking records | 119,500 |
+| CRM customers | 10,000 |
+| CRM interactions | 25,000 |
+| CRM campaigns | 25 |
+| CRM campaign activities | 5,000 |
+| CRM campaign conversions | 159 |
+
+Potential booking duplicates were investigated. Records were not automatically removed because the source data does not provide a reliable PMS reservation identifier to establish a defensible business key.
+
+## 9. Project Structure
+
+```text
+ihcl-hotel-booking-data-platform/
+│
+├── crm_landing_to_raw.py
+│
+├── generate_crm_campaigns.py
+├── generate_crm_customers.py
+├── generate_crm_interactions.py
+│
+├── datasets/
+│   ├── PMS/
+│   │   └── bookings/
+│   │
+│   └── CRM/
+│       ├── campaigns/
+│       ├── customers/
+│       └── interactions/
+│
+├── models/
+│   ├── silver/
+│   │   ├── silver_bookings.sql
+│   │   ├── silver_crm_customers.sql
+│   │   ├── silver_crm_interactions.sql
+│   │   ├── silver_crm_campaign_master.sql
+│   │   ├── silver_crm_campaign_activity.sql
+│   │   └── schema.yml
+│   │
+│   └── gold/
+│       ├── dim_date.sql
+│       ├── dim_hotel.sql
+│       ├── fact_bookings.sql
+│       ├── mart_hotel_performance.sql
+│       ├── gold_crm_customer_360.sql
+│       ├── gold_crm_engagement_summary.sql
+│       ├── gold_crm_campaign_performance.sql
+│       ├── gold_crm_customer_segments.sql
+│       └── gold_schema.yml
+│
+├── macros/
+├── analyses/
+├── seeds/
+├── snapshots/
+├── tests/
+│
+├── dbt_project.yml
+└── README.md
+```
+
+## 10. Running the Project
+
+### Prerequisites
+
+- Python
+- AWS CLI
+- An AWS account with the required S3 and IAM permissions
+- A Snowflake account
+- dbt Core and the dbt Snowflake adapter
+- Git
+
+### Install dbt
 
 ```bash
+pip install dbt-core dbt-snowflake
+```
 
+### Configure Snowflake
+
+Configure your Snowflake connection in the local dbt `profiles.yml` file.
+
+Do not commit credentials, passwords, private keys, or `.env` files to GitHub.
+
+### Validate the connection
+
+```bash
+dbt debug
+```
+
+### Parse the dbt project
+
+```bash
+dbt parse
+```
+
+### Run all models and tests
+
+```bash
+dbt build
+```
+
+### Generate dbt documentation
+
+```bash
 dbt docs generate
-
 ```
 
-
-
-Serve documentation locally:
-
-
+### Serve documentation locally
 
 ```bash
-
 dbt docs serve --port 8081
-
 ```
 
+Note: AWS ingestion infrastructure and Snowflake objects must be configured before running the complete pipeline from source files.
 
+## 11. Key Engineering Concepts Demonstrated
 
-\## 10. Key Engineering Concepts Demonstrated
+- Cloud data ingestion using AWS S3.
+- Secure AWS IAM and Snowflake integration.
+- Event-driven ingestion with Snowpipe and SQS.
+- Bronze, Silver, and Gold Medallion architecture.
+- SQL-based ELT using dbt Core.
+- Deterministic SHA-256 technical keys.
+- Dimensional modelling and fact/dimension relationships.
+- Customer 360 analytical modelling.
+- Marketing campaign performance analytics.
+- Aggregation design and prevention of join multiplication.
+- Data quality testing and referential integrity.
+- Source-level traceability and audit metadata.
+- Git-based source control.
 
+## 12. Future Enhancements
 
+Potential improvements include:
 
-\- Cloud object storage using AWS S3.
+- Incremental dbt models for efficient batch processing.
+- Automated orchestration and scheduled execution.
+- CI/CD integration using GitHub Actions.
+- Ingestion monitoring and alerting.
+- Additional analytical marts.
+- Dashboard integration with Power BI or Tableau.
+- Automated source-to-target reconciliation.
 
-\- Secure AWS-to-Snowflake integration.
+## 13. Conclusion
 
-\- Event-driven ingestion using Snowpipe.
+This project demonstrates an end-to-end cloud data engineering platform covering hotel booking and CRM analytics.
 
-\- Bronze, Silver, and Gold architecture.
+It combines AWS S3, Snowflake, Snowpipe, Python, SQL, and dbt Core to demonstrate data ingestion, transformation, dimensional modelling, data quality validation, and business-oriented analytics.
 
-\- SQL-based ELT transformations using dbt Core.
+The completed implementation includes 13 table models and 60 passing dbt data tests, with all 73 operations succeeding in the final full-project build.
 
-\- SHA-256 deterministic technical keys.
+---
 
-\- Dimensional modelling and fact/dimension relationships.
+**Repository:** [ihcl-hotel-booking-data-platform](https://github.com/sivasql35/ihcl-hotel-booking-data-platform)
 
-\- Data quality testing and anomaly investigation.
-
-\- Source-level data lineage and auditability.
-
-\- Business-oriented aggregation and reporting.
-
-
-
-\## 11. Future Enhancements
-
-
-
-Potential next improvements:
-
-
-
-\- Incremental dbt models for efficient processing of new batches.
-
-\- Automated orchestration and scheduled dbt execution.
-
-\- CI/CD integration using GitHub Actions.
-
-\- Monitoring and alerting for ingestion failures.
-
-\- Reconciliation between S3 source files and Snowflake Bronze.
-
-\- Additional analytical marts and dashboard integration.
-
-
-
-\## 12. Conclusion
-
-
-
-This project demonstrates an end-to-end data engineering workflow using AWS, Snowflake, and dbt Core.
-
-
-
-It covers automated data ingestion, secure cloud integration, SQL-based transformations, dimensional modelling, data quality validation, lineage documentation, and business analytics.
-
-
-
-The implementation provides a practical demonstration of modern cloud data engineering concepts and SQL-based ELT development.
-
+**Author:** Sivananda Nadimidoddi
